@@ -3,6 +3,10 @@ import React, { useRef, useState } from 'react';
 import { StatusBar, ActivityIndicator, View, Platform, BackHandler, Image, Text } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
+import * as SplashScreen from 'expo-splash-screen';
+
+// Prevent native splash screen from auto-hiding on app startup
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 const APP_URL = 'https://quran-ambience.vercel.app/';
 
@@ -109,15 +113,22 @@ export default function App() {
   const [webViewLoading, setWebViewLoading] = useState(true);
   const [minTimeElapsed, setMinTimeElapsed] = useState(false);
 
-  // Enforce a minimum of 4 seconds loading duration on initial launch
+  // Enforce a minimum of 2 seconds loading duration on initial launch
   React.useEffect(() => {
     const timer = setTimeout(() => {
       setMinTimeElapsed(true);
-    }, 4000);
+    }, 2000);
     return () => clearTimeout(timer);
   }, []);
 
   const isLoading = webViewLoading || !minTimeElapsed;
+
+  // Hide native splash screen once initial loading state is cleared
+  React.useEffect(() => {
+    if (!isLoading) {
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [isLoading]);
 
   // Set defaults based on 'mint' (the default theme shown in the user's screenshot)
   const [safeAreaColor, setSafeAreaColor] = useState('#f0fdfa');
