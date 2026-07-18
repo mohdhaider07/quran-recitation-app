@@ -1,13 +1,6 @@
 import './global.css';
 import React, { useRef, useState } from 'react';
-import {
-  StatusBar,
-  ActivityIndicator,
-  View,
-  Platform,
-  BackHandler,
-  Image,
-} from 'react-native';
+import { StatusBar, ActivityIndicator, View, Platform, BackHandler, Image } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 
@@ -98,7 +91,10 @@ const INJECTED_JS = `
 `;
 
 // Theme configuration mapping matching variables in globals.css
-const THEME_MAP: Record<string, { bg: string; statusStyle: 'dark-content' | 'light-content'; accent: string }> = {
+const THEME_MAP: Record<
+  string,
+  { bg: string; statusStyle: 'dark-content' | 'light-content'; accent: string }
+> = {
   mint: { bg: '#f0fdfa', statusStyle: 'dark-content', accent: '#0d9488' },
   pearl: { bg: '#f8fafc', statusStyle: 'dark-content', accent: '#059669' },
   cream: { bg: '#fffbeb', statusStyle: 'dark-content', accent: '#d97706' },
@@ -111,25 +107,24 @@ const THEME_MAP: Record<string, { bg: string; statusStyle: 'dark-content' | 'lig
 export default function App() {
   const webViewRef = useRef<WebView>(null);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   // Set defaults based on 'mint' (the default theme shown in the user's screenshot)
   const [safeAreaColor, setSafeAreaColor] = useState('#f0fdfa');
-  const [statusBarStyle, setStatusBarStyle] = useState<'dark-content' | 'light-content'>('dark-content');
+  const [statusBarStyle, setStatusBarStyle] = useState<'dark-content' | 'light-content'>(
+    'dark-content'
+  );
   const [themeAccentColor, setThemeAccentColor] = useState('#0d9488');
 
   // Handle Android hardware back button
   React.useEffect(() => {
     if (Platform.OS === 'android') {
-      const backHandler = BackHandler.addEventListener(
-        'hardwareBackPress',
-        () => {
-          if (webViewRef.current) {
-            webViewRef.current.goBack();
-            return true;
-          }
-          return false;
+      const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+        if (webViewRef.current) {
+          webViewRef.current.goBack();
+          return true;
         }
-      );
+        return false;
+      });
       return () => backHandler.remove();
     }
   }, []);
@@ -141,10 +136,10 @@ export default function App() {
       if (data.type === 'THEME_CHANGE') {
         const themeKey = data.theme || 'mint';
         const isDark = data.isDark;
-        
+
         // Find matching theme configuration, fallback to dark/mint if unknown
         const themeConfig = THEME_MAP[themeKey] || (isDark ? THEME_MAP.dark : THEME_MAP.mint);
-        
+
         setSafeAreaColor(themeConfig.bg);
         setStatusBarStyle(themeConfig.statusStyle);
         setThemeAccentColor(themeConfig.accent);
@@ -157,11 +152,7 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <View style={{ flex: 1, backgroundColor: safeAreaColor }}>
-        <StatusBar
-          barStyle={statusBarStyle}
-          backgroundColor={safeAreaColor}
-          translucent={false}
-        />
+        <StatusBar barStyle={statusBarStyle} backgroundColor={safeAreaColor} translucent={false} />
         <SafeAreaView style={{ flex: 1, backgroundColor: safeAreaColor }}>
           <WebView
             ref={webViewRef}
@@ -193,10 +184,20 @@ export default function App() {
 
           {/* Loading overlay */}
           {isLoading && (
-            <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: safeAreaColor, alignItems: 'center', justifyContent: 'center' }}>
-              <Image 
-                source={require('./assets/icon.png')} 
-                style={{ width: 120, height: 120, marginBottom: 24, borderRadius: 24 }} 
+            <View
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: safeAreaColor,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+              <Image
+                source={require('./assets/icon.png')}
+                style={{ width: 120, height: 120, marginBottom: 24, borderRadius: 24 }}
                 resizeMode="contain"
               />
               <ActivityIndicator size="large" color={themeAccentColor} />
