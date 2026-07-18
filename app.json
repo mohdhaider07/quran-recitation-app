@@ -15,7 +15,7 @@
         "expo-splash-screen",
         {
           "image": "./assets/splash.png",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "#f0fdfa"
         }
       ],
       "expo-status-bar"
@@ -28,14 +28,14 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#f0fdfa"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#f0fdfa"
       },
-      "backgroundColor": "#ffffff",
+      "backgroundColor": "#f0fdfa",
       "package": "com.mohdhaider07.quranambience"
     },
     "extra": {

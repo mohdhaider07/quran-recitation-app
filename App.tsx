@@ -106,7 +106,18 @@ const THEME_MAP: Record<
 
 export default function App() {
   const webViewRef = useRef<WebView>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [webViewLoading, setWebViewLoading] = useState(true);
+  const [minTimeElapsed, setMinTimeElapsed] = useState(false);
+
+  // Enforce a minimum of 4 seconds loading duration on initial launch
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setMinTimeElapsed(true);
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const isLoading = webViewLoading || !minTimeElapsed;
 
   // Set defaults based on 'mint' (the default theme shown in the user's screenshot)
   const [safeAreaColor, setSafeAreaColor] = useState('#f0fdfa');
@@ -171,8 +182,8 @@ export default function App() {
             showsVerticalScrollIndicator={false}
             bounces={false}
             overScrollMode="never"
-            onLoadStart={() => setIsLoading(true)}
-            onLoadEnd={() => setIsLoading(false)}
+            onLoadStart={() => setWebViewLoading(true)}
+            onLoadEnd={() => setWebViewLoading(false)}
             onShouldStartLoadWithRequest={(request) => {
               return true;
             }}
