@@ -23,7 +23,9 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "backgroundColor": "#ffffff"
@@ -33,7 +35,13 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#ffffff",
+      "package": "com.mohdhaider07.quranambience"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "9b8c89a3-5bc3-4f14-816c-5aaab651a5f1"
+      }
     }
   }
 }

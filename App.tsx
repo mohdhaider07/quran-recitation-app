@@ -1,6 +1,6 @@
 import './global.css';
 import React, { useRef, useState } from 'react';
-import { StatusBar, ActivityIndicator, View, Platform, BackHandler, Image } from 'react-native';
+import { StatusBar, ActivityIndicator, View, Platform, BackHandler, Image, Text } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 
@@ -194,12 +194,28 @@ export default function App() {
                 backgroundColor: safeAreaColor,
                 alignItems: 'center',
                 justifyContent: 'center',
+                zIndex: 999,
               }}>
-              <Image
-                source={require('./assets/icon.png')}
-                style={{ width: 120, height: 120, marginBottom: 24, borderRadius: 24 }}
-                resizeMode="contain"
-              />
+              <View
+                style={{
+                  shadowColor: themeAccentColor,
+                  shadowOffset: { width: 0, height: 12 },
+                  shadowOpacity: 0.4,
+                  shadowRadius: 16,
+                  elevation: 16,
+                  marginBottom: 24,
+                  borderRadius: 24,
+                  backgroundColor: '#ffffff',
+                }}>
+                <Image
+                  source={require('./assets/icon.png')}
+                  style={{ width: 120, height: 120, borderRadius: 24 }}
+                  resizeMode="contain"
+                />
+              </View>
+              <Text style={{ fontSize: 28, fontWeight: 'bold', color: themeAccentColor, marginBottom: 24, letterSpacing: 0.5 }}>
+                Quran Ambience
+              </Text>
               <ActivityIndicator size="large" color={themeAccentColor} />
             </View>
           )}

@@ -2,8 +2,8 @@
   "name": "quran-ambience",
   "version": "1.0.0",
   "scripts": {
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "start": "expo start",
     "prebuild": "expo prebuild",
     "lint": "eslint \"**/*.{js,jsx,ts,tsx}\" && prettier -c \"**/*.{js,jsx,ts,tsx,json}\"",
@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "expo": "~57.0.7",
+    "expo-dev-client": "~57.0.7",
     "expo-splash-screen": "~57.0.4",
     "expo-status-bar": "~57.0.1",
     "nativewind": "latest",
