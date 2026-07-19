@@ -1,5 +1,5 @@
 import './global.css';
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useCallback } from 'react';
 import {
   StatusBar,
   ActivityIndicator,
@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
+import { Audio } from 'expo-av';
 
 const APP_URL = 'https://quran-ambience.vercel.app/';
 
@@ -98,27 +99,6 @@ const INJECTED_JS = `
 
     true;
   })();
-
-  // ─── Audio background tracking ─────────────────────────────────────────
-  // Mark every <audio> element with data-should-play when the user starts or
-  // stops playback. The React Native AppState listener uses this flag to resume
-  // the correct elements when the app comes back to the foreground after the
-  // Android WebView renderer was suspended during screen-lock.
-  (function() {
-    document.addEventListener('play', function(e) {
-      var target = e.target;
-      if (target && target.tagName === 'AUDIO') {
-        target.dataset.shouldPlay = 'true';
-      }
-    }, true);
-
-    document.addEventListener('pause', function(e) {
-      var target = e.target;
-      if (target && target.tagName === 'AUDIO') {
-        target.dataset.shouldPlay = 'false';
-      }
-    }, true);
-  })();
 `;
 
 // Theme configuration mapping matching variables in globals.css
@@ -171,40 +151,143 @@ export default function App() {
     }
   }, []);
 
-  // ─── AppState: resume audio after screen unlock ───────────────────────────
-  // On Android, the WebView renderer is paused when the screen locks
-  // (Activity.onPause → WebView.onPause), which suspends JS and audio.
-  // When the user unlocks and the app returns to the foreground we inject a
-  // small script that resumes any <audio> elements that were marked as
-  // data-should-play="true" by the tracking listeners in INJECTED_JS.
+  // Native Audio player refs
+  const soundRef = useRef<Audio.Sound | null>(null);
+  const playlistRef = useRef<any[]>([]);
+  const currentIndexRef = useRef<number>(0);
+  const isPlayingRef = useRef<boolean>(false);
+  const currentTimeRef = useRef<number>(0);
+  const durationRef = useRef<number>(0);
+  const isMutedRef = useRef<boolean>(false);
+  const volumeRef = useRef<number>(0.8);
+
+  // Configure audio mode on mount
+  React.useEffect(() => {
+    const setupAudio = async () => {
+      try {
+        await Audio.setAudioModeAsync({
+          staysActiveInBackground: true,
+          shouldDuckAndroid: true,
+          playThroughEarpieceAndroid: false,
+        });
+      } catch (e) {
+        console.warn('Failed to setup Audio mode:', e);
+      }
+    };
+    setupAudio();
+    return () => {
+      if (soundRef.current) {
+        soundRef.current.unloadAsync();
+      }
+    };
+  }, []);
+
+  const sendEventToWebView = useCallback((type: string, payload: any) => {
+    if (webViewRef.current) {
+      const jsStr = `
+        if (window.onNativeAudioEvent) {
+          window.onNativeAudioEvent(JSON.stringify({
+            type: ${JSON.stringify(type)},
+            payload: ${JSON.stringify(payload)}
+          }));
+        }
+        true;
+      `;
+      webViewRef.current.injectJavaScript(jsStr);
+    }
+  }, []);
+
+  const sendSyncState = useCallback(() => {
+    sendEventToWebView('SYNC_STATE', {
+      currentIndex: currentIndexRef.current,
+      isPlaying: isPlayingRef.current,
+      currentTime: currentTimeRef.current,
+      duration: durationRef.current,
+    });
+  }, [sendEventToWebView]);
+
+  const onPlaybackStatusUpdate = (status: any) => {
+    if (!status.isLoaded) {
+      if (status.error) {
+        console.error(`Native playback error: ${status.error}`);
+      }
+      return;
+    }
+
+    currentTimeRef.current = status.positionMillis / 1000;
+    durationRef.current = (status.durationMillis || 0) / 1000;
+    isPlayingRef.current = status.isPlaying;
+
+    sendEventToWebView('TIME_UPDATE', { currentTime: currentTimeRef.current });
+    if (status.durationMillis) {
+      sendEventToWebView('DURATION_CHANGE', { duration: durationRef.current });
+    }
+
+    if (status.didJustFinish) {
+      handleTrackFinished();
+    }
+  };
+
+  const handleTrackFinished = async () => {
+    const nextIndex = currentIndexRef.current + 1;
+    if (nextIndex < playlistRef.current.length) {
+      currentIndexRef.current = nextIndex;
+      sendEventToWebView('TRACK_CHANGE', { index: nextIndex });
+      await playTrackAtIndex(nextIndex);
+    } else {
+      isPlayingRef.current = false;
+      sendEventToWebView('PLAYBACK_STATUS', { isPlaying: false });
+    }
+  };
+
+  const playTrackAtIndex = async (index: number) => {
+    try {
+      if (soundRef.current) {
+        await soundRef.current.unloadAsync();
+        soundRef.current = null;
+      }
+
+      const ayah = playlistRef.current[index];
+      if (!ayah || !ayah.audio) {
+        console.warn(`No audio URL for index ${index}`);
+        return;
+      }
+
+      const { sound } = await Audio.Sound.createAsync(
+        { uri: ayah.audio },
+        {
+          shouldPlay: isPlayingRef.current,
+          volume: isMutedRef.current ? 0 : volumeRef.current,
+        },
+        onPlaybackStatusUpdate
+      );
+
+      soundRef.current = sound;
+    } catch (error) {
+      console.error('Failed to load/play native audio track:', error);
+    }
+  };
+
+  // ─── AppState: sync state after screen unlock ───────────────────────────
   const appStateRef = React.useRef<AppStateStatus>(AppState.currentState);
   React.useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextState: AppStateStatus) => {
       const wasBackground = appStateRef.current.match(/inactive|background/);
-      const isNowActive   = nextState === 'active';
+      const isNowActive = nextState === 'active';
 
       if (wasBackground && isNowActive && webViewRef.current) {
-        webViewRef.current.injectJavaScript(`
-          (function() {
-            document.querySelectorAll('audio[data-should-play="true"]').forEach(function(audio) {
-              if (audio.paused) {
-                audio.play().catch(function() {});
-              }
-            });
-            true;
-          })();
-        `);
+        sendSyncState();
       }
 
       appStateRef.current = nextState;
     });
 
     return () => subscription.remove();
-  }, []);
+  }, [sendSyncState]);
   // ─────────────────────────────────────────────────────────────────────────
 
   // Handle message from the WebView
-  const handleMessage = (event: any) => {
+  const handleMessage = async (event: any) => {
     try {
       const data = JSON.parse(event.nativeEvent.data);
       if (data.type === 'THEME_CHANGE') {
@@ -217,9 +300,63 @@ export default function App() {
         setSafeAreaColor(themeConfig.bg);
         setStatusBarStyle(themeConfig.statusStyle);
         setThemeAccentColor(themeConfig.accent);
+      } else if (data.type === 'WEB_READY') {
+        sendSyncState();
+      } else if (data.type === 'SET_PLAYLIST') {
+        const { ayahs, currentIndex, isPlaying, volume, isMuted } = data.payload;
+
+        volumeRef.current = volume ?? volumeRef.current;
+        isMutedRef.current = isMuted ?? isMutedRef.current;
+        isPlayingRef.current = isPlaying ?? isPlayingRef.current;
+
+        const isSamePlaylist =
+          playlistRef.current.length === ayahs.length &&
+          playlistRef.current[0]?.audio === ayahs[0]?.audio;
+
+        playlistRef.current = ayahs;
+
+        if (!isSamePlaylist || currentIndexRef.current !== currentIndex) {
+          currentIndexRef.current = currentIndex;
+          await playTrackAtIndex(currentIndex);
+        } else {
+          // Playlist and track are same, just sync play/pause status
+          if (soundRef.current) {
+            if (isPlayingRef.current) {
+              await soundRef.current.playAsync();
+            } else {
+              await soundRef.current.pauseAsync();
+            }
+          }
+        }
+      } else if (data.type === 'PLAY') {
+        isPlayingRef.current = true;
+        sendEventToWebView('PLAYBACK_STATUS', { isPlaying: true });
+        if (soundRef.current) {
+          await soundRef.current.playAsync();
+        } else {
+          await playTrackAtIndex(currentIndexRef.current);
+        }
+      } else if (data.type === 'PAUSE') {
+        isPlayingRef.current = false;
+        sendEventToWebView('PLAYBACK_STATUS', { isPlaying: false });
+        if (soundRef.current) {
+          await soundRef.current.pauseAsync();
+        }
+      } else if (data.type === 'SEEK') {
+        const { time } = data.payload;
+        if (soundRef.current) {
+          await soundRef.current.setPositionAsync(time * 1000);
+        }
+      } else if (data.type === 'SET_VOLUME') {
+        const { volume, isMuted } = data.payload;
+        volumeRef.current = volume;
+        isMutedRef.current = isMuted;
+        if (soundRef.current) {
+          await soundRef.current.setVolumeAsync(isMuted ? 0 : volume);
+        }
       }
     } catch (e) {
-      console.warn('Failed to parse WebView theme message:', e);
+      console.warn('Failed to parse WebView message:', e);
     }
   };
 
@@ -287,7 +424,14 @@ export default function App() {
                   resizeMode="contain"
                 />
               </View>
-              <Text style={{ fontSize: 28, fontWeight: 'bold', color: themeAccentColor, marginBottom: 24, letterSpacing: 0.5 }}>
+              <Text
+                style={{
+                  fontSize: 28,
+                  fontWeight: 'bold',
+                  color: themeAccentColor,
+                  marginBottom: 24,
+                  letterSpacing: 0.5,
+                }}>
                 Quran Ambience
               </Text>
               <ActivityIndicator size="large" color={themeAccentColor} />

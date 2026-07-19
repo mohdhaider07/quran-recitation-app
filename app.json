@@ -23,9 +23,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
       "backgroundColor": "#f0fdfa"
@@ -37,10 +35,7 @@
       },
       "backgroundColor": "#f0fdfa",
       "package": "com.mohdhaider07.quranambience",
-      "permissions": [
-        "android.permission.WAKE_LOCK",
-        "android.permission.FOREGROUND_SERVICE"
-      ],
+      "permissions": ["android.permission.WAKE_LOCK", "android.permission.FOREGROUND_SERVICE"],
       "intentFilters": [
         {
           "action": "android.intent.action.MEDIA_BUTTON",
