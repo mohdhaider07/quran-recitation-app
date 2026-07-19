@@ -171,6 +171,38 @@ export default function App() {
     }
   }, []);
 
+  // ─── AppState: resume audio after screen unlock ───────────────────────────
+  // On Android, the WebView renderer is paused when the screen locks
+  // (Activity.onPause → WebView.onPause), which suspends JS and audio.
+  // When the user unlocks and the app returns to the foreground we inject a
+  // small script that resumes any <audio> elements that were marked as
+  // data-should-play="true" by the tracking listeners in INJECTED_JS.
+  const appStateRef = React.useRef<AppStateStatus>(AppState.currentState);
+  React.useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState: AppStateStatus) => {
+      const wasBackground = appStateRef.current.match(/inactive|background/);
+      const isNowActive   = nextState === 'active';
+
+      if (wasBackground && isNowActive && webViewRef.current) {
+        webViewRef.current.injectJavaScript(`
+          (function() {
+            document.querySelectorAll('audio[data-should-play="true"]').forEach(function(audio) {
+              if (audio.paused) {
+                audio.play().catch(function() {});
+              }
+            });
+            true;
+          })();
+        `);
+      }
+
+      appStateRef.current = nextState;
+    });
+
+    return () => subscription.remove();
+  }, []);
+  // ─────────────────────────────────────────────────────────────────────────
+
   // Handle message from the WebView
   const handleMessage = (event: any) => {
     try {

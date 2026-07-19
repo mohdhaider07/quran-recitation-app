@@ -36,7 +36,17 @@
         "backgroundColor": "#f0fdfa"
       },
       "backgroundColor": "#f0fdfa",
-      "package": "com.mohdhaider07.quranambience"
+      "package": "com.mohdhaider07.quranambience",
+      "permissions": [
+        "android.permission.WAKE_LOCK",
+        "android.permission.FOREGROUND_SERVICE"
+      ],
+      "intentFilters": [
+        {
+          "action": "android.intent.action.MEDIA_BUTTON",
+          "category": ["android.intent.category.DEFAULT"]
+        }
+      ]
     },
     "extra": {
       "eas": {
