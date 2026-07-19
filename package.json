@@ -13,6 +13,7 @@
   "dependencies": {
     "agent-cli-detector": "0.1.2",
     "expo": "~57.0.7",
+    "expo-av": "^16.0.8",
     "expo-dev-client": "~57.0.7",
     "expo-splash-screen": "~57.0.4",
     "expo-status-bar": "~57.0.1",
