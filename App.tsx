@@ -1,6 +1,16 @@
 import './global.css';
 import React, { useRef, useState } from 'react';
-import { StatusBar, ActivityIndicator, View, Platform, BackHandler, Image, Text } from 'react-native';
+import {
+  StatusBar,
+  ActivityIndicator,
+  View,
+  Platform,
+  BackHandler,
+  Image,
+  Text,
+  AppState,
+  type AppStateStatus,
+} from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 
@@ -87,6 +97,27 @@ const INJECTED_JS = `
     }
 
     true;
+  })();
+
+  // ─── Audio background tracking ─────────────────────────────────────────
+  // Mark every <audio> element with data-should-play when the user starts or
+  // stops playback. The React Native AppState listener uses this flag to resume
+  // the correct elements when the app comes back to the foreground after the
+  // Android WebView renderer was suspended during screen-lock.
+  (function() {
+    document.addEventListener('play', function(e) {
+      var target = e.target;
+      if (target && target.tagName === 'AUDIO') {
+        target.dataset.shouldPlay = 'true';
+      }
+    }, true);
+
+    document.addEventListener('pause', function(e) {
+      var target = e.target;
+      if (target && target.tagName === 'AUDIO') {
+        target.dataset.shouldPlay = 'false';
+      }
+    }, true);
   })();
 `;
 
